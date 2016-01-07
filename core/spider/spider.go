@@ -126,11 +126,15 @@ func (this *Spider) Run() {
     }
     this.mc = resource_manage.NewResourceManageChan(this.threadnum)
 
+    //init db  by sorawa
+
     for {
         req := this.pScheduler.Poll()
 
         // mc is not atomic
         if this.mc.Has() == 0 && req == nil && this.exitWhenComplete {
+	    mlog.StraceInst().Println("** executed callback **")
+	    this.pPageProcesser.Finish()
             mlog.StraceInst().Println("** end spider **")
             break
         } else if req == nil {
@@ -141,7 +145,7 @@ func (this *Spider) Run() {
         this.mc.GetOne()
 
         // Asynchronous fetching
-        go func(*request.Request) {
+        go func(req *request.Request) {
             defer this.mc.FreeOne()
             //time.Sleep( time.Duration(rand.Intn(5)) * time.Second)
             mlog.StraceInst().Println("start crawl : " + req.GetUrl())
@@ -265,10 +269,38 @@ func (this *Spider) AddUrl(url string, respType string) *Spider {
     return this
 }
 
+func (this *Spider) AddUrlEx(url string, respType string, headerFile string, proxyHost string) *Spider {
+    req := request.NewRequest(url, respType, "", "GET", "", nil, nil, nil, nil)
+    this.AddRequest(req.AddHeaderFile(headerFile).AddProxyHost(proxyHost))
+    return this
+}
+
+func (this *Spider) AddUrlWithHeaderFile(url string, respType string, headerFile string) *Spider {
+    req := request.NewRequestWithHeaderFile(url, respType, headerFile)
+    this.AddRequest(req)
+    return this
+}
+
 func (this *Spider) AddUrls(urls []string, respType string) *Spider {
     for _, url := range urls {
         req := request.NewRequest(url, respType, "", "GET", "", nil, nil, nil, nil)
         this.AddRequest(req)
+    }
+    return this
+}
+
+func (this *Spider) AddUrlsWithHeaderFile(urls []string, respType string, headerFile string) *Spider {
+    for _, url := range urls {
+        req := request.NewRequestWithHeaderFile(url, respType, headerFile)
+        this.AddRequest(req)
+    }
+    return this
+}
+
+func (this *Spider) AddUrlsEx(urls []string, respType string, headerFile string, proxyHost string) *Spider {
+    for _, url := range urls {
+        req := request.NewRequest(url, respType, "", "GET", "", nil, nil, nil, nil)
+        this.AddRequest(req.AddHeaderFile(headerFile).AddProxyHost(proxyHost))
     }
     return this
 }
@@ -315,6 +347,7 @@ func (this *Spider) pageProcess(req *request.Request) {
         if p.IsSucc() { // if fail retry 3 times
             break
         }
+
     }
 
     if !p.IsSucc() { // if fail do not need process
@@ -323,13 +356,13 @@ func (this *Spider) pageProcess(req *request.Request) {
 
     this.pPageProcesser.Process(p)
     for _, req := range p.GetTargetRequests() {
-        //fmt.Printf("%v\n",req)
         this.AddRequest(req)
     }
 
     // output
     if !p.GetSkip() {
         for _, pip := range this.pPiplelines {
+            //fmt.Println("%v",p.GetPageItems().GetAll())
             pip.Process(p.GetPageItems(), this)
         }
     }

@@ -5,9 +5,11 @@ package page
 import (
     "github.com/PuerkitoBio/goquery"
     "github.com/bitly/go-simplejson"
+    "github.com/hu17889/go_spider/core/common/mlog"
     "github.com/hu17889/go_spider/core/common/page_items"
     "github.com/hu17889/go_spider/core/common/request"
     "net/http"
+    "strings"
     //"fmt"
 )
 
@@ -132,6 +134,27 @@ func (this *Page) AddTargetRequests(urls []string, respType string) *Page {
     return this
 }
 
+// AddTargetRequestWithProxy adds one new Request waitting for crawl.
+func (this *Page) AddTargetRequestWithProxy(url string, respType string, proxyHost string) *Page {
+
+    this.targetRequests = append(this.targetRequests, request.NewRequestWithProxy(url, respType, "", "GET", "", nil, nil, proxyHost, nil, nil))
+    return this
+}
+
+// AddTargetRequestsWithProxy adds new Requests waitting for crawl.
+func (this *Page) AddTargetRequestsWithProxy(urls []string, respType string, proxyHost string) *Page {
+    for _, url := range urls {
+        this.AddTargetRequestWithProxy(url, respType, proxyHost)
+    }
+    return this
+}
+
+// AddTargetRequest adds one new Request with header file for waitting for crawl.
+func (this *Page) AddTargetRequestWithHeaderFile(url string, respType string, headerFile string) *Page {
+    this.targetRequests = append(this.targetRequests, request.NewRequestWithHeaderFile(url, respType, headerFile))
+    return this
+}
+
 // AddTargetRequest adds one new Request waitting for crawl.
 // The respType is "html" or "json" or "jsonp" or "text".
 // The urltag is name for marking url and distinguish different urls in PageProcesser and Pipeline.
@@ -176,6 +199,18 @@ func (this *Page) SetHtmlParser(doc *goquery.Document) *Page {
 
 // GetHtmlParser returns goquery object binded to target crawl result.
 func (this *Page) GetHtmlParser() *goquery.Document {
+    return this.docParser
+}
+
+// GetHtmlParser returns goquery object binded to target crawl result.
+func (this *Page) ResetHtmlParser() *goquery.Document {
+    r := strings.NewReader(this.body)
+    var err error
+    this.docParser, err = goquery.NewDocumentFromReader(r)
+    if err != nil {
+        mlog.LogInst().LogError(err.Error())
+        panic(err.Error())
+    }
     return this.docParser
 }
 

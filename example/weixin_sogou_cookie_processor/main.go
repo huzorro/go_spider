@@ -10,12 +10,12 @@ Pckages may be imported:
     "github.com/PuerkitoBio/goquery": html dom parser.
 */
 import (
+    "fmt"
+
     "github.com/PuerkitoBio/goquery"
     "github.com/hu17889/go_spider/core/common/page"
     "github.com/hu17889/go_spider/core/pipeline"
     "github.com/hu17889/go_spider/core/spider"
-    "strings"
-    "fmt"
 )
 
 type MyPageProcesser struct {
@@ -34,26 +34,24 @@ func (this *MyPageProcesser) Process(p *page.Page) {
     }
 
     query := p.GetHtmlParser()
-    var urls []string
-    query.Find("h3[class='repo-list-name'] a").Each(func(i int, s *goquery.Selection) {
-        href, _ := s.Attr("href")
-        urls = append(urls, "http://github.com/"+href)
-    })
-    // these urls will be saved and crawed by other coroutines.
-    p.AddTargetRequests(urls, "html")
 
-    name := query.Find(".entry-title .author").Text()
-    name = strings.Trim(name, " \t\n")
-    repository := query.Find(".entry-title .js-current-repository").Text()
-    repository = strings.Trim(repository, " \t\n")
-    //readme, _ := query.Find("#readme").Html()
-    if name == "" {
+    query.Find(`div[class="wx-rb bg-blue wx-rb_v1 _item"]`).Each(func(i int, s *goquery.Selection) {
+        name := s.Find("div.txt-box > h3").Text()
+        href, _ := s.Attr("href")
+
+        fmt.Printf("WeName:%v link:http://http://weixin.sogou.com%v \r\n", name, href)
+        // the entity we want to save by Pipeline
+        p.AddField("name", name)
+        p.AddField("href", href)
+    })
+
+    next_page_href, _ := query.Find("#sogou_next").Attr("href")
+    if next_page_href == "" {
         p.SetSkip(true)
+    } else {
+        p.AddTargetRequestWithHeaderFile("http://weixin.sogou.com/weixin"+next_page_href, "html", "weixin.sogou.com.json")
     }
-    // the entity we want to save by Pipeline
-    p.AddField("author", name)
-    p.AddField("project", repository)
-    //p.AddField("readme", readme)
+
 }
 
 func (this *MyPageProcesser) Finish() {
@@ -64,9 +62,10 @@ func main() {
     // Spider input:
     //  PageProcesser ;
     //  Task name used in Pipeline for record;
+    req_url := "http://weixin.sogou.com/weixin?query=%E4%BA%91%E6%B5%AE&type=1&page=1&ie=utf8"
     spider.NewSpider(NewMyPageProcesser(), "TaskName").
-        AddUrl("https://github.com/hu17889?tab=repositories", "html"). // Start url, html is the responce type ("html" or "json" or "jsonp" or "text")
-        AddPipeline(pipeline.NewPipelineConsole()).                    // Print result on screen
-        SetThreadnum(3).                                               // Crawl request by three Coroutines
+        AddUrlWithHeaderFile(req_url, "html", "weixin.sogou.com.json"). // Start url, html is the responce type ("html" or "json" or "jsonp" or "text")
+        AddPipeline(pipeline.NewPipelineConsole()).                     // Print result on screen
+        SetThreadnum(3).                                                // Crawl request by three Coroutines
         Run()
 }

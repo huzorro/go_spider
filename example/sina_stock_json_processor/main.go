@@ -9,7 +9,7 @@ import (
     "github.com/hu17889/go_spider/core/common/page"
     "github.com/hu17889/go_spider/core/pipeline"
     "github.com/hu17889/go_spider/core/spider"
-    //"fmt"
+    "fmt"
     "log"
     "strconv"
 )
@@ -82,6 +82,10 @@ func (this *MyPageProcesser) Process(p *page.Page) {
 
 }
 
+func (this *MyPageProcesser) Finish() {
+    fmt.Printf("TODO:before end spider \r\n")
+}
+
 func main() {
     // spider input:
     //  PageProcesser ;
@@ -90,7 +94,7 @@ func main() {
         AddUrl("http://live.sina.com.cn/zt/api/l/get/finance/globalnews1/index.htm?format=json&id=63621&pagesize=10&dire=f", "json"). // start url, html is the responce type ("html" or "json" or "jsonp" or "text")
         AddPipeline(pipeline.NewPipelineConsole()).                                                                                   // Print result to std output
         AddPipeline(pipeline.NewPipelineFile("/tmp/sinafile")).                                                                       // Print result in file
-        OpenFileLog("/tmp").                                                                                                              // Error info or other useful info in spider will be logged in file of defalt path like "WD/log/log.2014-9-1".
+        OpenFileLog("/tmp").                                                                                                          // Error info or other useful info in spider will be logged in file of defalt path like "WD/log/log.2014-9-1".
         SetSleepTime("rand", 1000, 3000).                                                                                             // Sleep time between 1s and 3s.
         Run()
     //AddPipeline(pipeline.NewPipelineFile("/tmp/tmpfile")). // print result in file
